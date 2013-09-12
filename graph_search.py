@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from graph import *
 from priority_queue import CustomPriorityQueue
+from stopwatch import StopWatch
 
 INPUT_GRAPH_LOCATION = "romania.in"
 
@@ -17,11 +18,11 @@ def uniform_cost_search(problem):
     """
     color = defaultdict(lambda: WHITE)
     distance = defaultdict(lambda: float('inf'))
-    path = defaultdict(lambda: None)
+    #path = defaultdict(lambda: None)
 
     color[problem.initial] = GRAY
     distance[problem.initial] = 0
-    path[problem.initial] = None
+    #path[problem.initial] = None
     pq = CustomPriorityQueue()
     initial_state = (0,problem.initial)
     pq.add(initial_state)
@@ -128,13 +129,19 @@ def input_graph_undirected(file):
     return (g,node_geo_locations)
 
 def main():
+    sw1 = StopWatch()
     (g,geo_locations) = input_graph_undirected(INPUT_GRAPH_LOCATION)
     #g.pretty_print()
     p = Problem(g,g.node(0),g.node(1))
 
+    
     cost =  uniform_cost_search(p)
+    el1 = sw1.elapsed_microseconds()
 
-    print cost
+    print "Uniform cost search"
+    print "Solution:",cost
+    print "Time:", el1
+
 
 
 if __name__ == "__main__":
