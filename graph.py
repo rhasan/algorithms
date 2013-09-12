@@ -1,8 +1,11 @@
 from collections import defaultdict
-"""Class for a graph node"""
+
 class Node:
-    """Initializes a node with a node id and label"""
+    """Class for a graph node"""
     def __init__(self,node_id,label):
+        """
+        Initializes a node with a node id and label
+        """
         self.node_id = node_id
         self.label = label
     
@@ -15,13 +18,15 @@ class Node:
     def __repr__(self):
         return self.label
 
-"""Class for a graph edge"""
+
 class Edge:
-    """
-    Initializes an edge with a start node and end node and a label
-    start and end are instances of Node class.
-    """
+    """Class for a graph edge"""
+    
     def __init__(self, start, end,label):
+        """
+        Initializes an edge with a start node and end node and a label
+        start and end are instances of Node class.
+        """
         self.start = start
         self.end = end
         self.label = label
@@ -37,67 +42,66 @@ class Edge:
         return str((self.start.label,self.label,self.end.label))
 
 
-"""Class for Graphs"""
 class Graph(object):
+    """Class for Graphs"""
     
-    """
-    Initializes the graph.
-    """
     def __init__(self):
+        """
+        Initializes the graph.
+        """
         self.edges = defaultdict(lambda: list())
         self.node_dict = dict()
-        #self.nodes_list = list()
 
-    """
-    Adds a Node to the graph.
-    """
     def add_node(self,node):
+        """
+        Adds a Node to the graph.
+        """
         self.node_dict[node.node_id] = node
 
-    """
-    Returns the list of Node instances in the graph.
-    """
     def node_list(self):
+        """
+        Returns the list of Node instances in the graph.
+        """
         return self.node_dict.values()
 
-    """
-    Adds an Edge to the graph.
-    """
     def add_edge(self,edge):
+        """
+        Adds an Edge to the graph.
+        """
         self.edges[edge.start.node_id].append(edge)
 
-    """
-    Returns the Node for the node_id.
-    """
     def node(self,node_id):
+        """
+        Returns the Node for the node_id.
+        """
         return self.node_dict[node_id]
 
-    """
-    Returns the list of outgoing edges from node.
-    """
     def outgoing_edges(self,node):
+        """
+        Returns the list of outgoing edges from node.
+        """
         return self.edges[node.node_id]
 
-    """
-    Returns the list adjacent nodes
-    """
     def adjacent(self,node):
+        """
+        Returns the list adjacent nodes
+        """
         adj = list()
         edgs = self.edges[node.node_id]
         for edg in edgs:
             adj.append(edg.end)
         return adj
 
-    """
-    Returns the number of nodes in the graph.
-    """
     def size(self):
+        """
+        Returns the number of nodes in the graph.
+        """
         return len(self.node_dict)
 
-    """
-    Print the graph.
-    """
     def pretty_print(self):
+        """
+        Print the graph.
+        """
         nodes = self.node_list()
 
         for node in nodes:

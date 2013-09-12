@@ -15,7 +15,7 @@ class CustomPriorityQueue:
         'Add a new entry or update the priority of an existing task'
         (pr,val) = entry
         if val in self.entry_finder:
-            remove_task(val)
+            remove(val)
         entry_list = [pr,val]
         self.entry_finder[val] = entry_list
         heappush(self.pq, entry_list)
