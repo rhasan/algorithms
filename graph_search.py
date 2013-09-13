@@ -1,8 +1,10 @@
+import math
 from collections import defaultdict
 
 from graph import *
 from priority_queue import CustomPriorityQueue
 from stopwatch import StopWatch
+from sets import Set
 
 INPUT_GRAPH_LOCATION = "romania.in"
 
@@ -18,11 +20,11 @@ def uniform_cost_search(problem):
     """
     color = defaultdict(lambda: WHITE)
     distance = defaultdict(lambda: float('inf'))
-    #path = defaultdict(lambda: None)
+    parent = defaultdict(lambda: None)
 
     color[problem.initial] = GRAY
     distance[problem.initial] = 0
-    #path[problem.initial] = None
+    #parent[problem.initial] = None
     pq = CustomPriorityQueue()
     initial_state = (0,problem.initial)
     pq.add(initial_state)
@@ -32,15 +34,17 @@ def uniform_cost_search(problem):
         children_states = problem.children(u)
 
         if problem.goal_test(u):
-            return pathcost
+            return (pathcost,reconstruct_path(parent,problem.goal))
 
         for (child,cost) in children_states:
             if color[child] == WHITE:
                 color[child] = GRAY
                 distance[child] = pathcost + cost
                 pq.add((distance[child],child))
+                parent[child] = u
             elif color[child] == GRAY and distance[child] > pathcost + cost:
                 distance[child] = pathcost + cost
+                parent[child] = u
                 pq.replace(child,(distance[child],child))
 
         color[u] = BLACK
@@ -49,9 +53,9 @@ def uniform_cost_search(problem):
 
 
 
-class Problem:
+class ProblemShortestPath:
     """Class for graph search problem"""
-    def __init__(self, g,initial,goal):
+    def __init__(self, g, initial, goal):
         self.graph = g
         self.initial = initial
         self.goal = goal
@@ -59,7 +63,7 @@ class Problem:
     def goal_test(self,node):
         return self.goal.node_id == node.node_id
 
-    def children(self,node):
+    def children(self, node):
         edges = self.graph.outgoing_edges(node)
         cldrn = list()
         for edg in edges:
@@ -67,7 +71,127 @@ class Problem:
             cost = edg.label
             cldrn.append((end,cost))
         return cldrn
+
+    def init_huristic(self, geo_locations):
+        self.geo_locations = geo_locations
+
+    def h(self,p,q):
+        (p_x, p_y) = self.geo_locations[p]
+        (q_x, q_y) = self.geo_locations[q]
+        #return (p_x-q_x)*(p_x-q_x) + (p_y-q_y)*(p_y-q_y)
+        return math.hypot((p_x-q_x),(p_y-q_y))
         
+
+
+def a_star(problem):
+    """
+    A* search reference: http://en.wikipedia.org/wiki/A*_search_algorithm
+    """
+    closedset = Set()
+    openset = Set()
+    parent = defaultdict(lambda: None)
+    g = {}
+    f = {}
+
+    openset.add(problem.initial)
+    g[problem.initial] = 0
+    f[problem.initial] = g[problem.initial] + problem.h(problem.initial,problem.goal)
+
+    pq = CustomPriorityQueue()
+    pq.add((f[problem.initial],problem.initial))
+
+    while pq.empty() == False:
+        (current_f, current) = pq.pop()
+
+        if problem.goal_test(current):
+            return (g[current],reconstruct_path(parent,problem.goal))
+
+        openset.remove(current)
+        closedset.add(current)
+
+        children = problem.children(current)
+        for (child,cost) in children:
+            tentative_g_score = g[current] + cost
+            if child in closedset and tentative_g_score >= g[child]:
+                continue
+            if child not in closedset or tentative_g_score < g[child]: # don't need to initialize for each i in g.V: g[i]=inf. The reason is
+                                                                       # if a node x is not initilized that means there was visited. 
+                                                                       # That means it the node x is not in openset. Hence the node
+                                                                       # x is also not in closedset
+                parent[child] = current
+                g[child] = tentative_g_score
+                f[child] = g[child] + problem.h(child,problem.goal)
+                #print "edge:",current,"-->",child,"real:",cost, "approx:",problem.h(current,child)
+                if child not in openset:
+                    openset.add(child)
+                    pq.add((f[child],child))
+                elif child in openset:
+                    # Replace the priority queue f[child] value. Wiki algo didn't use a priority queue. 
+                    # They choose the current node by selecting the node in openset having the lowest f[] value
+                    # Therefore they are getting the updated f values from f[]. In our case, the lowest f[] value
+                    # is taken from the priority queue. Therefore, we need to keep the most uptodate f values in 
+                    # the priority queue. The replace operation is optimized according to python documentation.
+                    pq.replace(child,(f[child],child))
+                    #print "replace"
+
+    return None
+
+
+def a_star_beam_search(problem,beam_size):
+    """
+    A* search reference: http://en.wikipedia.org/wiki/A*_search_algorithm
+    """
+    closedset = Set()
+    openset = Set()
+    parent = defaultdict(lambda: None)
+    g = {}
+    f = {}
+
+    openset.add(problem.initial)
+    g[problem.initial] = 0
+    f[problem.initial] = g[problem.initial] + problem.h(problem.initial,problem.goal)
+
+    pq = CustomPriorityQueue()
+    pq.add((f[problem.initial],problem.initial))
+
+    while pq.empty() == False:
+        (current_f, current) = pq.pop()
+
+        if problem.goal_test(current):
+            #todo path
+            return (g[current],reconstruct_path(parent,problem.goal))
+
+        openset.remove(current)
+        closedset.add(current)
+
+        children = problem.children(current)
+        children_count = 0
+        for (child,cost) in children:
+            tentative_g_score = g[current] + cost
+            if child in closedset and tentative_g_score >= g[child]:
+                continue
+            if (child not in closedset or tentative_g_score < g[child]) and children_count < beam_size:
+                parent[child] = current
+                g[child] = tentative_g_score
+                f[child] = g[child] + problem.h(child,problem.goal)
+                children_count += 1
+                if child not in openset:
+                    openset.add(child)
+                    pq.add((f[child],child))
+                elif child in openset:
+                    pq.replace(child,(f[child],child))
+
+    return None
+
+
+def reconstruct_path(parent,current):
+    if current in parent:
+        p = reconstruct_path(parent,parent[current])
+        p.append(current)
+        return p
+    else:
+        return [current]
+
 
 def input_graph_undirected(file):
     g = Graph()
@@ -93,7 +217,7 @@ def input_graph_undirected(file):
         node = Node(node_id,node_label)
         g.add_node(node)
         node_label_id_mapping[node_label] = node_id
-        node_geo_locations[node_id] = (geo_x,geo_y)
+        node_geo_locations[node] = (geo_x,geo_y)
 
         node_id += 1
 
@@ -129,19 +253,43 @@ def input_graph_undirected(file):
     return (g,node_geo_locations)
 
 def main():
-    sw1 = StopWatch()
+    
     (g,geo_locations) = input_graph_undirected(INPUT_GRAPH_LOCATION)
     #g.pretty_print()
-    p = Problem(g,g.node(0),g.node(1))
+    p = ProblemShortestPath(g,g.node(0),g.node(1))
 
-    
-    cost =  uniform_cost_search(p)
-    el1 = sw1.elapsed_microseconds()
+    #uniform cost search
+    sw1 = StopWatch()
+    (u_cost, result_path) =  uniform_cost_search(p)
+    el1 = sw1.elapsed_milliseconds()
 
     print "Uniform cost search"
-    print "Solution:",cost
+    print "Solution:",u_cost
+    print "Path:", result_path
     print "Time:", el1
 
+    #A* search
+    p.init_huristic(geo_locations)
+    sw1.reset()
+    (a_cost, result_path) = a_star(p)
+    el1 = sw1.elapsed_milliseconds()
+    print "===================="
+    print "A * search"
+    print "Solution:",a_cost
+    print "Path:", result_path
+    print "Time:", el1    
+
+    #A* search
+    sw1.reset()
+    beam_size = 3
+    (a_cost, result_path) = a_star_beam_search(p,beam_size)
+    el1 = sw1.elapsed_milliseconds()
+    print "===================="
+    print "A * beam search"
+    print "Beam size:", beam_size
+    print "Solution:",a_cost
+    print "Path:", result_path
+    print "Time:", el1    
 
 
 if __name__ == "__main__":
